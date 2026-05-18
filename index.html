@@ -11,13 +11,16 @@
     .container { max-width: 600px; margin: auto; }
   </style>
 </head>
+
 <body class="p-4 text-gray-800">
 
   <div class="container bg-white rounded-2xl shadow-lg p-6 mt-4">
+
     <h1 class="text-2xl font-bold text-center mb-4 text-blue-700">
       Route 31 Time Scheduler
     </h1>
-    
+
+    <!-- Start Time -->
     <div class="mb-4">
       <label class="block text-sm font-medium mb-1">Start Time</label>
       <input
@@ -26,6 +29,14 @@
         value="08:00"
         class="w-full p-2 border rounded-lg"
       />
+    </div>
+
+    <!-- Lunch Checkbox -->
+    <div class="mb-4 flex items-center gap-2">
+      <input id="lunchBreak" type="checkbox" class="w-4 h-4" />
+      <label for="lunchBreak" class="text-sm font-medium">
+        Lunch Break Taken 
+      </label>
     </div>
 
     <button
@@ -38,114 +49,121 @@
     <div id="scheduleOutput" class="mt-6"></div>
   </div>
 
-  <script>
-    const neighborhoods = [
-      "Office",
-      "Businesses",
-      "Pecos",
-      "Santee",
-      "Big Horn",
-      "Sesquehanna",
-      "Salmon",
-      "Rock",
-      "Feather/Allegheny",
-      "Santa Rosa/San Luis",
-      "Driving",
-      "Kingston",
-      "Jamaca",
-      "Larkspur",
-      "Heritage",
-      "Sierra Bonita",
-      "Fisher",
-      "La Selle",
-      "Demmer",
-      "Pickups/Unload",
-      "End Time"
-    ];
+<script>
+const neighborhoods = [
+  { name: "Office", duration: 75 },
+  { name: "Businesses", duration: 60 },
+  { name: "Pecos", duration: 15 },
+  { name: "Santee", duration: 15 },
+  { name: "Big Horn", duration: 15 },
+  { name: "Sesquehanna", duration: 15 },
+  { name: "Salmon", duration: 15 },
+  { name: "Rock", duration: 15 },
 
-    function getDuration(name) {
-      name = name.toLowerCase();
-      if (name === "office") return 75;
-      if (name === "businesses") return 60;
-      if (name === "sierra bonita") return 30;
-      if (name === "driving") return 30;
-      if (name === "pickups/unload") return 30;
-      if (name.includes("/")) return 30;
-      if (name === "end time") return 0;
-      return 15;
+  { name: "Feather", duration: 15 },
+  { name: "Allegheny", duration: 15 },
+
+  { name: "Santa Rosa", duration: 15 },
+  { name: "San Luis", duration: 15 },
+
+  { name: "Driving", duration: 30 },
+  { name: "Kingston", duration: 15 },
+  { name: "Jamaca", duration: 15 },
+  { name: "Larkspur", duration: 15 },
+  { name: "Heritage", duration: 15 },
+
+  { name: "1700 Sierra Bonita", duration: 15 },
+  { name: "1500 Sierra Bonita", duration: 15 },
+
+  { name: "Fisher", duration: 15 },
+  { name: "La Selle", duration: 15 },
+  { name: "Demmer", duration: 15 },
+  { name: "Pickups/Unload", duration: 30 }
+];
+
+function formatTo12Hour(hours, minutes) {
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const adjustedHour = ((hours + 11) % 12 + 1);
+  return `${adjustedHour}:${minutes.toString().padStart(2, "0")} ${suffix}`;
+}
+
+function generateSchedule() {
+
+  const startTimeInput = document.getElementById("startTime").value;
+  if (!startTimeInput) return;
+
+  const lunchBreakTaken =
+    document.getElementById("lunchBreak").checked;
+
+  const [startHour, startMin] = startTimeInput.split(":").map(Number);
+
+  let currentTime = new Date();
+  currentTime.setHours(startHour, startMin, 0, 0);
+
+  let scheduleHTML = `
+    <h2 class="text-xl font-semibold mb-3 text-gray-700">
+      Generated Schedule
+    </h2>
+
+    <table class="w-full border-collapse text-sm md:text-base">
+      <thead>
+        <tr class="bg-gray-100 text-left">
+          <th class="p-2 border">Neighborhood</th>
+          <th class="p-2 border">Start Time</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  neighborhoods.forEach((stop) => {
+
+    const name = stop.name;
+    const duration = stop.duration;
+
+    const formattedTime = formatTo12Hour(
+      currentTime.getHours(),
+      currentTime.getMinutes()
+    );
+
+    scheduleHTML += `
+      <tr class="border-b hover:bg-gray-50">
+        <td class="p-2 border">${name}</td>
+        <td class="p-2 border text-blue-600 font-medium">
+          ${formattedTime}
+        </td>
+      </tr>
+    `;
+
+    // advance time for this stop
+    currentTime.setMinutes(
+      currentTime.getMinutes() + duration
+    );
+
+    // lunch happens AFTER Businesses
+    if (lunchBreakTaken && name === "Businesses") {
+      currentTime.setMinutes(
+        currentTime.getMinutes() + 30
+      );
     }
+  });
 
-    function generateSchedule() {
-      const startTimeInput = document.getElementById("startTime").value;
-      if (!startTimeInput) return;
+  scheduleHTML += "</tbody></table>";
 
-      const [startHour, startMin] = startTimeInput.split(":").map(Number);
-      let currentTime = new Date();
-      currentTime.setHours(startHour, startMin, 0, 0);
+  const endTime = currentTime;
 
-      let scheduleHTML = `
-        <h2 class="text-xl font-semibold mb-3 text-gray-700">
-          Generated Schedule
-        </h2>
-        <table class="w-full border-collapse">
-          <thead>
-            <tr class="bg-gray-100 text-left">
-              <th class="p-2 border">Neighborhood</th>
-              <th class="p-2 border">Start Time</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+  scheduleHTML += `
+    <p class="mt-3 font-semibold text-gray-700">
+      Estimated End Time:
+      <span class="text-blue-600">
+        ${formatTo12Hour(endTime.getHours(), endTime.getMinutes())}
+      </span>
+    </p>
+  `;
 
-      let totalMinutes = 0;
-
-      neighborhoods.forEach((name, index) => {
-        const duration = getDuration(name);
-        totalMinutes += duration;
-
-        const formattedTime = formatTo12Hour(
-          currentTime.getHours(),
-          currentTime.getMinutes()
-        );
-
-        scheduleHTML += `
-          <tr class="border-b hover:bg-gray-50">
-            <td class="p-2 border">${name}</td>
-            <td class="p-2 border text-blue-600 font-medium">
-              ${formattedTime}
-            </td>
-          </tr>
-        `;
-
-        if (index < neighborhoods.length - 1) {
-          currentTime.setMinutes(currentTime.getMinutes() + duration);
-        }
-      });
-
-      scheduleHTML += "</tbody></table>";
-
-      const endTime = new Date();
-      endTime.setHours(startHour, startMin, 0, 0);
-      endTime.setMinutes(endTime.getMinutes() + totalMinutes);
-
-      scheduleHTML += `
-        <p class="mt-3 font-semibold text-gray-700">
-          Estimated End Time:
-          <span class="text-blue-600">
-            ${formatTo12Hour(endTime.getHours(), endTime.getMinutes())}
-          </span>
-        </p>
-      `;
-
-      document.getElementById("scheduleOutput").innerHTML = scheduleHTML;
-    }
-
-    function formatTo12Hour(hours, minutes) {
-      const suffix = hours >= 12 ? "PM" : "AM";
-      const adjustedHour = ((hours + 11) % 12 + 1);
-      return `${adjustedHour}:${minutes.toString().padStart(2, "0")} ${suffix}`;
-    }
-  </script>
+  document.getElementById("scheduleOutput").innerHTML =
+    scheduleHTML;
+}
+</script>
 
 </body>
 </html>
